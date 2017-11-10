@@ -11,6 +11,7 @@ CACHE_FNAME = 'cache_file_name.json'
 db_connection = None
 db_cursor = None
 
+
 # caching from Project 2 ------------------------------------------------------
 def load_cache():
     global CACHE_DICTION
@@ -19,14 +20,16 @@ def load_cache():
         cache_contents = cache_file.read()
         CACHE_DICTION = json.loads(cache_contents)
         cache_file.close()
-    except:
+    except FileNotFoundError:
         CACHE_DICTION = {}
+
 
 def save_cache():
     full_text = json.dumps(CACHE_DICTION)
-    cache_file_ref = open(CACHE_FNAME,"w")
+    cache_file_ref = open(CACHE_FNAME, "w")
     cache_file_ref.write(full_text)
     cache_file_ref.close()
+
 
 def params_unique_combination(baseurl, params_d, private_keys=["api_key"]):
     alphabetized_keys = sorted(params_d.keys())
@@ -35,6 +38,7 @@ def params_unique_combination(baseurl, params_d, private_keys=["api_key"]):
         if k not in private_keys:
             res.append("{}-{}".format(k, params_d[k]))
     return baseurl + "_".join(res)
+
 
 def sample_get_cache_itunes_data(baseurl, params=None):
     if not params:
@@ -49,6 +53,7 @@ def sample_get_cache_itunes_data(baseurl, params=None):
         save_cache()
 
     return CACHE_DICTION[unique_ident]
+
 
 class Song:
     def __init__(self, song_dict):
@@ -90,16 +95,21 @@ def get_connection_and_cursor():
     global db_connection, db_cursor
     if not db_connection:
         try:
-            db_connection = psycopg2.connect("dbname='{0}' user='{1}' password='{2}'".format(db_name, db_user, db_password))
+            db_connection = psycopg2.connect(
+                "dbname='{0}' user='{1}' password='{2}'".format(
+                    db_name, db_user, db_password))
             print("Success connecting to database")
         except:
-            print("Unable to connect to the database. Check server and credentials.")
-            sys.exit(1) # Stop running program if there's no db connection.
+            print("Unable to connect to the database. "
+                  "Check server and credentials.")
+            sys.exit(1)  # Stop running program if there's no db connection.
 
     if not db_cursor:
-        db_cursor = db_connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        db_cursor = db_connection.cursor(
+            cursor_factory=psycopg2.extras.RealDictCursor)
 
     return db_connection, db_cursor
+
 
 def setup_database():
     # Invovles DDL commands
@@ -118,6 +128,15 @@ def setup_database():
     # track_url TEXT
     # artist_id INTEGER
     # album_id INTEGER
+    cur.execute("""CREATE TABLE Songs(
+        track_id INTEGER PRIMARY KEY
+        track_name VARCHAR(255) NOT NULL
+        track_number INTEGER
+        genre VARCHAR(128)
+        track_url TEXT
+        artist_id INTEGER
+        album_id INTEGER)
+    """)
 
     # TODO At the end of the exercise, if time permits
     # try using artist_id INTEGER REFERENCES Artists(artist_id)
@@ -141,12 +160,14 @@ def setup_database():
 
     print('Setup database complete')
 
+
 def insert(conn, cur, table, data_dict):
     column_names = data_dict.keys()
     # print(column_names)
 
     # generate insert into query string
-    query = sql.SQL('INSERT INTO {0}({1}) VALUES({2}) ON CONFLICT DO NOTHING').format(
+    query = sql.SQL(
+        'INSERT INTO {0}({1}) VALUES({2}) ON CONFLICT DO NOTHING').format(
         sql.SQL(table),
         sql.SQL(', ').join(map(sql.Identifier, column_names)),
         sql.SQL(', ').join(map(sql.Placeholder, column_names))
@@ -154,18 +175,20 @@ def insert(conn, cur, table, data_dict):
     query_string = query.as_string(conn)
     cur.execute(query_string, data_dict)
 
-def lookup_id(id):
+
+def lookup_id(l_id):
     response = sample_get_cache_itunes_data(
-        baseurl = "https://itunes.apple.com/lookup",
-        params = { "id": id }
+        baseurl="https://itunes.apple.com/lookup",
+        params={"id": l_id}
     )
     results = response['results']
     return results[0]
 
+
 def search_songs(search_term):
     response = sample_get_cache_itunes_data(
-        baseurl = "https://itunes.apple.com/search",
-        params = {
+        baseurl="https://itunes.apple.com/search",
+        params={
             "term": search_term,
             "media": "music"
         }
@@ -184,14 +207,15 @@ def search_songs(search_term):
         # cur.execute("""INSERT INTO .... """, ...)
 
 
-    # TODO
-    # cur.execute("SELECT ...")
-    # cur.fetchone()
-    # cur.fetchmany()
-    # cur.fetchall()
+        # TODO
+        # cur.execute("SELECT ...")
+        # cur.fetchone()
+        # cur.fetchmany()
+        # cur.fetchall()
 
-    # conn.commit()
-    # conn.rollback()
+        # conn.commit()
+        # conn.rollback()
+
 
 if __name__ == '__main__':
     command = None
